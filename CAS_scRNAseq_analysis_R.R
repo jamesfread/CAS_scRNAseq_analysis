@@ -1,18 +1,8 @@
----
-title: "CAS_scRNAseq_analysis"
-author: "James Read, PhD"
-output: html_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 
 
 ### Load libraries
 
-```{r, warning=FALSE, message=FALSE, echo=FALSE, eval=TRUE}
 library(Matrix)
 library(DropletUtils)
 library(scater)
@@ -26,34 +16,19 @@ library(DoubletFinder)
 library(SingleR)
 library(gridExtra)
 library(tictoc)
-```
+
+# Set up input and output directories (change to match local pathway)
+In.dir = "Path/To/Raw_data"
+Out.dir1 = "Path/To/QC"
+Out.dir2 = "Path/To/Output"
 
 
-```{r, warning=FALSE, message=FALSE, echo=TRUE, eval=FALSE}
-library(Matrix)
-library(DropletUtils)
-library(scater)
-library(SingleCellExperiment)
-library(Seurat)
-library(org.Hs.eg.db) # Human
-library(cowplot)
-library(dplyr)
-library(biomaRt)
-library(DoubletFinder)
-library(SingleR)
-library(gridExtra)
-library(tictoc)
-```
-
-```{r}
-In.dir = "C:/Users/jread/Desktop/Work/Git/CAS_scRNAseq_analysis/Raw_data"
-Out.dir1 = "C:/Users/jread/Desktop/Work/Git/CAS_scRNAseq_analysis/QC"
-```
+# Part 1 - QC and Preprocessing
 
 ## Preprocessing function
 
-This function applies preprocessing to raw data indicated in the function input. The outputs will be saved in the 'QC' directory
-```{r, warning=FALSE, message=FALSE}
+#This function applies preprocessing to raw data indicated in the function input. The outputs will be saved in the 'QC' directory
+
 preprocess_function = function(d, age, stim, save.obj) {
   
   ##### Setup #####
@@ -94,7 +69,7 @@ preprocess_function = function(d, age, stim, save.obj) {
   x1 <- x1[,which(e.out$FDR<=0.01)] # remove 'empty drops'
   # Number not empty
   dim(x1)
-
+  
   #### Filter genes ####
   print("Filtering genes...")
   # Create singleCellExperiment object
@@ -131,7 +106,7 @@ preprocess_function = function(d, age, stim, save.obj) {
   
   png(paste("2)", nam, "GeneByChr.png", sep="_"), units="in", width=12, height=5, res=300)
   barplot(p1$Freq, main = paste(nam,"\nFeatures per chromosome"), xlab = "Chromosome", cex.main = 1.5,
-                  col = alpha("cyan", 0.2), border = "cyan3", lwd = 3, names.arg = p1$Var1)
+          col = alpha("cyan", 0.2), border = "cyan3", lwd = 3, names.arg = p1$Var1)
   invisible(dev.off())
   
   ## QC metrics
@@ -173,16 +148,16 @@ preprocess_function = function(d, age, stim, save.obj) {
   qc.f$nFeature_nCount_ratio = qc.f$detected/qc.f$total
   png(paste("4)", nam, "FeatureCountRatio.png", sep="_"), units="in", width=5, height=5, res=300)
   plot(qc.f$nFeature_nCount_ratio, ylab = "Feature/count", pch = 21, col = "black",
-            bg = alpha("grey50", 0.5), main = paste(nam, "\nFeature to count ratio"), cex = 0.7)
+       bg = alpha("grey50", 0.5), main = paste(nam, "\nFeature to count ratio"), cex = 0.7)
   abline(h = 0.1, col = "cyan3", lty = 2, lwd=2)
   if (summary(qc.f$nFeature_nCount_ratio)[[1]] < 0.01) {
     legend("bottomright", legend = paste(table(qc.f$nFeature_nCount_ratio<0.1)[[2]], "cells removed"),
-         text.font = 3, bty='n', text.col = "grey50", cex=0.7)
+           text.font = 3, bty='n', text.col = "grey50", cex=0.7)
   }
   
   if (summary(qc.f$nFeature_nCount_ratio)[[1]] > 0.01) {
     legend("bottomright", legend = "0 cells removed",
-         text.font = 3, bty='n', text.col = "grey50", cex=0.7)
+           text.font = 3, bty='n', text.col = "grey50", cex=0.7)
   }
   
   invisible(dev.off())
@@ -192,14 +167,14 @@ preprocess_function = function(d, age, stim, save.obj) {
     qc.f = qc.f[, !qc.f$nFeature_nCount_ratio<0.1]
   }
   
-    # Plot by mitochondrial content
+  # Plot by mitochondrial content
   ## Using a threshold of 3x the Median Absolute Deviation (MAD) as high mitochondrial content
   q.met = qc.f$subsets_Mito_percent
   png(paste("5)", nam, "Mito_Ribo_Plots.png", sep="_"), units="in", width=12, height=4, res=300)
   par(mfrow = c(1, 3))
   plot(log10(qc.f$total), q.met, xlab = "Log10(Total genes)", ylab = "Mitochondrial genes (%)",
-            pch = 21, col = "black", bg = alpha("grey50", 0.5),
-            main = paste(nam, "\nMitochondrial content"), cex = 0.7)
+       pch = 21, col = "black", bg = alpha("grey50", 0.5),
+       main = paste(nam, "\nMitochondrial content"), cex = 0.7)
   abline(h = median(q.met) + 3*mad(q.met), col = "dodgerblue", lty = 2, lwd=2)
   legend("topright", legend = paste("Mitochondrial gene threshold = ",
                                     round(median(q.met) + 3*mad(q.met),2), "%", sep=""),
@@ -235,7 +210,7 @@ preprocess_function = function(d, age, stim, save.obj) {
   png(paste("6)", nam, "Log10Plots_AfterQC1.png", sep="_"), units="in", width=12, height=5, res=300)
   par(mfrow=c(1,2))
   hist(log(sce1$detected, 10),
-            main = paste(nam, "- No. features (Log10)\n[Number of unique genes per cell]"),
+       main = paste(nam, "- No. features (Log10)\n[Number of unique genes per cell]"),
        xlab = "Log10 Unique Features",
        breaks = 50, col = "cyan", border = "grey")
   hist(log(sce1$total, 10),
@@ -324,7 +299,7 @@ preprocess_function = function(d, age, stim, save.obj) {
   png(paste("16)", nam, "Cluster_HM.png", sep="_"), units="in", width=8, height=8, res=300)
   print(DoHeatmap(S1, features = top10$gene, size = 3) + ggtitle(nam))
   invisible(dev.off())
-
+  
   # Cell cycle
   print("Calculating cell cycle phase...")
   s.genes <- cc.genes$s.genes
@@ -345,7 +320,7 @@ preprocess_function = function(d, age, stim, save.obj) {
   legend("topright", legend = c("G1", "G2M", "S1"), col=c("#F8766D", "#0CB702", "#00A9FF"),
          pch=15, cex=1.2)
   invisible(dev.off())
-
+  
   ##### Doublet detection #####
   print("Detecting doublets...")
   hush=function(code){
@@ -353,7 +328,7 @@ preprocess_function = function(d, age, stim, save.obj) {
     tmp = code
     sink()
     return(tmp)
-    } # supress some of the outputs
+  } # supress some of the outputs
   sweep.res = hush(paramSweep(S1, PCs = 1:15, sct = FALSE))
   sweep.stats = summarizeSweep(sweep.res, GT = FALSE)
   # Detemine pK value
@@ -362,11 +337,11 @@ preprocess_function = function(d, age, stim, save.obj) {
   bc.mvn$pK <- unique(sweep.stats$pK); bc.mvn$ParamID <- 1:nrow(bc.mvn)
   x <- 0
   for (i in unique(bc.mvn$pK)) {
-      x <- x + 1
-      ind <- which(sweep.stats$pK == i)
-      bc.mvn$MeanBC[x] <- mean(sweep.stats[ind, "BCreal"])
-      bc.mvn$VarBC[x] <- sd(sweep.stats[ind, "BCreal"])^2
-      bc.mvn$BCmetric[x] <- mean(sweep.stats[ind, "BCreal"])/(sd(sweep.stats[ind, "BCreal"])^2)}
+    x <- x + 1
+    ind <- which(sweep.stats$pK == i)
+    bc.mvn$MeanBC[x] <- mean(sweep.stats[ind, "BCreal"])
+    bc.mvn$VarBC[x] <- sd(sweep.stats[ind, "BCreal"])^2
+    bc.mvn$BCmetric[x] <- mean(sweep.stats[ind, "BCreal"])/(sd(sweep.stats[ind, "BCreal"])^2)}
   bc.mvn$pK_num = c(0.005, seq(0.01, 0.3, 0.01))
   opt.pK = bc.mvn[which(bc.mvn$BCmetric == max(bc.mvn$BCmetric)), "pK_num"]
   # estimate the homotypic proportion
@@ -376,15 +351,15 @@ preprocess_function = function(d, age, stim, save.obj) {
   # Plot optimum pK value
   png(paste("19)", nam, "Doublet_pK_optimum.png", sep="_"), units="in", width=5, height=5, res=300)
   plot(bc.mvn$pK_num, log(bc.mvn$BCmetric), ylab = "Log(metric)", xlab = "pK",
-  main = "Mean-variance normalized\nbimodality coefficient (log)", pch = 19,
-  type = 'b', col="dodgerblue2")
+       main = "Mean-variance normalized\nbimodality coefficient (log)", pch = 19,
+       type = 'b', col="dodgerblue2")
   abline(v=opt.pK, col=alpha("firebrick1", 0.5), lwd=3, lty=2)
   legend("topright", legend = paste("Optimum pK =", opt.pK), bty="n",
          text.font = 2, text.col = alpha("firebrick1", 0.5))
   invisible(dev.off())
   # Run DoubletFinder on Seurat object
   seu1 <- hush(doubletFinder(S1, PCs = 1:15, pN = 0.25, pK = opt.pK,
-                           nExp = nExp_poi.adj, reuse.pANN = FALSE, sct = FALSE))
+                             nExp = nExp_poi.adj, reuse.pANN = FALSE, sct = FALSE))
   #Add into orignial Seurat object
   identical(colnames(S1), colnames(seu1)) # Check objects match
   S1$Doublet = seu1@meta.data[, ncol(seu1@meta.data)]
@@ -459,26 +434,26 @@ preprocess_function = function(d, age, stim, save.obj) {
   
   print("Finished!!!!")
 }
-```
 
-# Run the function
 
-See raw files available for preprocessing. These are in the 'Raw_data' directory and were taken from the GEO repository (GSE232186) at https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE232186
-```{r, warning=FALSE, message=FALSE}
+## Run the function
+
+#See raw files available for preprocessing. These are in the 'Raw_data' directory and were taken from the GEO repository (GSE232186) at https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE232186
+
 setwd(In.dir)
 list.files()
-```
-
-Now run the function to apply preprocessing to the raw data. The function will create several output plots and save a seurat object of the preprocessed data (if save.obj = "TRUE)
-
-Note: 'save.obj' is set to 'FALSE' as the seurat object saved is > 100mb for each sample, which is larger than github allows.
 
 
-# Donor 1 - Cord blood
+#Now run the function to apply preprocessing to the raw data. The function will create several output plots and save a seurat object of the preprocessed data (if save.obj = "TRUE)
+
+#Note: 'save.obj' is set to 'FALSE' as the seurat object saved is > 100mb for each sample, which is larger than github allows.
+
+
+## Donor 1 - Cord blood
 
 ### Donor 1 - Cord - Unstimulated
 
-```{r, warning=FALSE, message=FALSE}
+
 setwd(In.dir)
 tic() # To time run
 D1_Cord_Unstim = preprocess_function(d = "Donor1", age = "Cord", stim = "Unstim", save.obj = "FALSE")
@@ -486,148 +461,85 @@ toc()
 # See output
 class(D1_Cord_Unstim)
 dim(D1_Cord_Unstim)
-```
 
 ### Donor 1 - Cord - LPS
-
-```{r, warning=FALSE, message=FALSE}
-setwd(In.dir)
 tic()
 D1_Cord_LPS = preprocess_function(d = "Donor1", age = "Cord", stim = "LPS", save.obj = "FALSE")
 toc()
-```
 
 ### Donor 1 - Cord - PolyIC
-
-```{r, warning=FALSE, message=FALSE}
-setwd(In.dir)
 tic()
 D1_Cord_PIC = preprocess_function(d = "Donor1", age = "Cord", stim = "PIC", save.obj = "FALSE")
 toc()
-```
-
-
-# Donor 1 - 5 year blood
 
 ### Donor 1 - 5yr - Unstimulated
 
-```{r, warning=FALSE, message=FALSE}
-setwd(In.dir)
 tic()
 D1_5yr_Unstim = preprocess_function(d = "Donor1", age = "5yr", stim = "Unstim", save.obj = "FALSE")
 toc()
-```
 
 ### Donor 1 - 5yr - LPS
-
-```{r, warning=FALSE, message=FALSE}
-setwd(In.dir)
 tic()
 D1_5yr_LPS = preprocess_function(d = "Donor1", age = "5yr", stim = "LPS", save.obj = "FALSE")
 toc()
-```
 
 ### Donor 1 - 5yr - PolyIC
-
-```{r, warning=FALSE, message=FALSE}
-setwd(In.dir)
 tic()
 D1_5yr_PIC = preprocess_function(d = "Donor1", age = "5yr", stim = "PIC", save.obj = "FALSE")
 toc()
-```
 
-
-
-# Donor 2 - Cord blood
 
 ### Donor 2 - Cord - Unstimulated
-
-```{r, warning=FALSE, message=FALSE}
-setwd(In.dir)
 tic()
 D2_Cord_Unstim = preprocess_function(d = "Donor2", age = "Cord", stim = "Unstim", save.obj = "FALSE")
 toc()
-```
 
 ### Donor 2 - Cord - LPS
-
-```{r, warning=FALSE, message=FALSE}
-setwd(In.dir)
 tic()
 D2_Cord_LPS = preprocess_function(d = "Donor2", age = "Cord", stim = "LPS", save.obj = "FALSE")
 toc()
-```
 
 ### Donor 2 - Cord - PolyIC
-
-```{r, warning=FALSE, message=FALSE}
-setwd(In.dir)
 tic()
 D2_Cord_PIC = preprocess_function(d = "Donor2", age = "Cord", stim = "PIC", save.obj = "FALSE")
 toc()
-```
 
-
-# Donor 2 - 5 year blood
 
 ### Donor 2 - 5yr - Unstimulated
-
-```{r, warning=FALSE, message=FALSE}
-setwd(In.dir)
 tic()
 D2_5yr_Unstim = preprocess_function(d = "Donor2", age = "5yr", stim = "Unstim", save.obj = "FALSE")
 toc()
-```
 
 ### Donor 2 - 5yr - LPS
-
-```{r, warning=FALSE, message=FALSE}
-setwd(In.dir)
 tic()
 D2_5yr_LPS = preprocess_function(d = "Donor2", age = "5yr", stim = "LPS", save.obj = "FALSE")
 toc()
-```
 
 ### Donor 2 - 5yr - PolyIC
-
-```{r, warning=FALSE, message=FALSE}
-setwd(In.dir)
 tic()
 D2_5yr_PIC = preprocess_function(d = "Donor2", age = "5yr", stim = "PIC", save.obj = "FALSE")
 toc()
-```
 
 
 ###########################################################
 
-# Part 2
+# Part 2 - Integration and Annotation
 
-# Integration
+### Load libraries
+library(Seurat)
+library(RColorBrewer)
+library(pheatmap)
+library(org.Hs.eg.db)
+library(WGCNA)
+library(scales)
+library(ggplot2)
+library(basicPlotteR)
+library(enrichR)
+library(tictoc)
 
-```{r, warning=FALSE}
+## Integration
 
-setwd("C:/Users/jread/Desktop/Work/CAS_scRNAseq/New_Cleaned_data")
-
-D1_Cord_Unstim = D1_Cord_Unstim,
-D1_Cord_LPS = D1_Cord_LPS,
-D1_Cord_PIC = D1_Cord_PIC,
-D1_5yr_Unstim = D1_5yr_Unstim,
-D1_5yr_LPS = D1_5yr_LPS,
-D1_5yr_PIC = D1_5yr_PIC,
-D2_Cord_Unstim = D2_Cord_Unstim,
-D2_Cord_LPS = D2_Cord_LPS,
-D2_Cord_PIC = D2_Cord_PIC,
-D2_5yr_Unstim = D2_5yr_Unstim,
-D2_5yr_LPS = D2_5yr_LPS,
-D2_5yr_PIC = D2_5yr_PIC
-
-```
-
-
-```{r}
-
-
-# Integrate data
+#Make integration list
 
 s.obj.list = list(
   D1_Cord_Unstim = D1_Cord_Unstim,
@@ -644,14 +556,445 @@ s.obj.list = list(
   D2_5yr_PIC = D2_5yr_PIC
 )
 
-
+# Select features
 features = SelectIntegrationFeatures(object.list = s.obj.list)
 
-```
+# Find anchors
+
+tic()
+anchors = invisible(FindIntegrationAnchors(object.list = s.obj.list, k.anchor = 5,
+                                           anchor.features = features,
+                                           reduction = "rpca"))
+toc()
+
+# Integrate data
+tic()
+s.obj = invisible(IntegrateData(anchorset = anchors))
+toc()
+
+# Rejoin data layers
+s.obj[["RNA"]] <- JoinLayers(s.obj[["RNA"]])
+
+# Clean up
+rm(D1_Cord_LPS, D1_Cord_PIC, D1_Cord_Unstim, D1_5yr_LPS, D1_5yr_PIC,
+   D1_5yr_Unstim, D2_Cord_LPS, D2_Cord_PIC, D2_Cord_Unstim,
+   D2_5yr_LPS, D2_5yr_PIC, D2_5yr_Unstim, s.obj.list, anchors)
+gc()
+
+
+
+### Seurat dimensionality reduction and clustering
+
+DefaultAssay(object = s.obj) <- "integrated"
+
+s.obj <- ScaleData(s.obj)
+s.obj <- RunPCA(s.obj, npcs = 30, verbose = FALSE)
+s.obj <- RunUMAP(s.obj, reduction = "pca", dims = 1:30, 
+                 n.neighbors = 20, min.dist = 0.3, verbose = FALSE)
+s.obj <- FindNeighbors(s.obj, reduction = "pca", dims = 1:30, verbose = FALSE)
+s.obj <- FindClusters(s.obj, resolution = 0.4, verbose = FALSE)
+
+
+# Plot UMAP and clusters cluster
+DimPlot(s.obj, reduction = "umap", label = TRUE, repel = TRUE) + NoLegend()
+
+#Add cellular detection rate
+
+# Switch back to 'RNA' assay
+DefaultAssay(object = s.obj) <- "RNA"
+# Add CDR
+cdr1 <-colSums(s.obj@assays$RNA$counts)
+cdr2 <-colSums(s.obj@assays$RNA$counts>0)
+cdr = cdr2/cdr1
+# add to metadata
+s.obj$CDR = cdr
+
+#Plot cellular detection rate
+plot(cdr, col = alpha(labels2colors(s.obj$Group), 0.2), main="Cellular detection rate",
+     ylab="CDR", pch = 19, cex = 0.3)
+
+
+# Optional, save integrated data object
+# setwd(In.dir)
+# saveRDS(s.obj, "seurat_object_integrated.rds")
 
 
 
 
+## Annotation
+
+# Cells were annotated with Azimuth, based on the human PBMC reference.
+
+# Can be run at https://azimuth.hubmapconsortium.org/ or use code below
+
+library(Azimuth)
+tic()
+s.obj = RunAzimuth(query = s.obj, reference = "pbmcref", verbose = TRUE)
+toc()
+
+#Although the level 2 annotations will be used, can filter cells based on the level 1 annotation score to remove cells which have low confidence annotation at high level annotation.
+table(s.obj$predicted.celltype.l1.score > 0.5)
+
+#Remove low confidence cells
+s.obj = subset(x = s.obj, subset = predicted.celltype.l1.score > 0.5)
+# rename
+s.obj$Azimuth_2_CT = s.obj$predicted.celltype.l2
+
+# Cell numbers
+table(s.obj$Azimuth_2_CT)
+
+# Add color scheme for cell types
+set.col = c("B naive" = "royalblue2", "B intermediate" = "plum", "B memory" = "mediumseagreen",
+            "CD4 Naive" = "deepskyblue", "CD4 TCM" = "coral1", "CD4 TEM" = "indianred",
+            "CD4 Proliferating" = "seagreen3", "CD4 CTL" = "snow3", "Treg" = "cornflowerblue",
+            "gdT" = "yellow2", "dnT" = "powderblue", "MAIT" = "palevioletred1",
+            "CD8 Naive" = "darkorange", "CD8 TEM" = "navy", "CD8 TCM" = "firebrick1",
+            "cDC1" = "hotpink", "cDC2" = "darkorchid1", "ASDC" = "darkorange",
+            "pDC" = "deeppink3", "HSPC" = "brown3", "ILC" = "lightblue",
+            "CD14 Mono" = "forestgreen", "CD16 Mono" = "gold2", "NK" = "magenta3",
+            "NK_CD56bright" = "sienna3", "NK Proliferating" = "sienna2",
+            "Plasmablast" = "brown", "Platelet" = "wheat3")
+
+# add to metadata
+s.obj@meta.data$Cell.Col = set.col[s.obj$Azimuth_2_CT]
+
+#Plot
+DimPlot(s.obj, reduction = "umap", group.by = "Azimuth_2_CT", label = T,
+        repel=T, cols = set.col) + NoLegend()
+
+### Housekeeping
+
+#Re-arrange some variables and add color schemes
+s.obj@meta.data$Stimuli = ifelse(s.obj$Stimuli == "Unstim", "CTRL", s.obj$Stimuli)
+s.obj@meta.data$Age = ifelse(s.obj$Age == "Cord", "CBMC", "5yr_PBMC")
+s.obj@meta.data$Age.Stimuli_Group = paste(s.obj$Age, s.obj$Stimuli, sep = "_")
+
+stim.col = c(CTRL = "grey80", LPS = "forestgreen", PIC = "orange2")
+s.obj@meta.data$Stim_col = stim.col[as.character(s.obj$Stimuli)]
+
+phase.col = c(G1 = "cornflowerblue", G2M = "coral2", S = "aquamarine3")
+s.obj@meta.data$Phase_col = phase.col[as.character(s.obj$Phase)]
+
+samp.col = c(Donor1 = "brown1", Donor2 = "deepskyblue2")
+s.obj@meta.data$Samp_col = samp.col[as.character(s.obj$Sample)]
+
+age.col = c("CBMC" = "cyan3", "5yr_PBMC" = "magenta3")
+s.obj@meta.data$Age_col = age.col[as.character(s.obj$Age)]
+
+set.col_G = c("CBMC_CTRL" = "khaki", "CBMC_LPS" = "green3", "CBMC_PIC" = "coral",
+             "5yr_PBMC_CTRL" = "ivory3", "5yr_PBMC_LPS" = "royalblue2",
+             "5yr_PBMC_PIC" = "red2")
+s.obj@meta.data$Group.Col = set.col_G[as.character(s.obj$Age.Stimuli_Group)]
+
+### Remove cells low numbers
+
+s.obj = s.obj[, (s.obj$Azimuth_2_CT == "B intermediate" | 
+                    s.obj$Azimuth_2_CT == "B memory" |
+                    s.obj$Azimuth_2_CT == "B naive" | 
+                    s.obj$Azimuth_2_CT == "CD14 Mono" | 
+                    s.obj$Azimuth_2_CT == "CD16 Mono" | 
+                    s.obj$Azimuth_2_CT == "CD4 Naive" | 
+                    s.obj$Azimuth_2_CT == "CD4 TCM" | 
+                    s.obj$Azimuth_2_CT == "CD4 TEM" | 
+                    s.obj$Azimuth_2_CT == "CD8 Naive" | 
+                    s.obj$Azimuth_2_CT == "CD8 TCM" | 
+                    s.obj$Azimuth_2_CT == "CD8 TEM" |
+                    s.obj$Azimuth_2_CT == "dnT" |
+                    s.obj$Azimuth_2_CT == "gdT" |
+                    s.obj$Azimuth_2_CT == "HSPC" |
+                    s.obj$Azimuth_2_CT == "ILC" |
+                    s.obj$Azimuth_2_CT == "MAIT" | 
+                    s.obj$Azimuth_2_CT == "NK" |
+                    s.obj$Azimuth_2_CT == "NK_CD56bright" |
+                    s.obj$Azimuth_2_CT == "Treg")]
+table(factor(s.obj$Azimuth_2_CT))
+
+### Table of cell numbers
+
+table(s.obj@meta.data$Azimuth_2_CT, s.obj@meta.data$Age.Stimuli_Group)
+
+# organize
+x1 = as.data.frame.matrix(table(s.obj$Azimuth_2_CT, s.obj$Age.Stimuli_Group))
+x1$Total = rowSums(x1)
+
+# Save plot
+setwd(Out.dir2)
+png("1)_Celltytpe_by_group_counts.png", units="in", width=15, height=5, res=300)
+pheatmap(t(x1), display_numbers = T,cluster_rows = FALSE, cluster_cols = FALSE,
+         legend = TRUE, fontsize = 15, fontsize_number = 15, gaps_row = c(2, 4, 6),
+         angle_col = 45, legend_breaks = c(0, 2500, 5000, 7500, 10000, 12500, 15000),
+         cellheight = 25, cellwidth = 40, na_col = "grey93", labels_col = rownames(x1),
+         labels_row = colnames(x1), number_format = "%.0f", number_color = "black",
+         color=alpha(c("white",colorRampPalette(brewer.pal(n=4, name="Greys"))(100)),0.95),
+         main = " ", cex.main = 0.6, font.main = 4)
+invisible(dev.off())
+
+### Plot umaps
+
+#Now plot UMAPs overlaid with variables of interest 
+
+# Cell type
+setwd(Out.dir2)
+png("2)_UMAP_celltype.png", units="in", width=6, height=5, res=300)
+DimPlot(s.obj, reduction = "umap", group.by = "Azimuth_2_CT", label = F,
+        repel=T, cols = set.col) + ggtitle("Azimuth define cell type annotation")
+invisible(dev.off())
+
+# Age
+png("3)_UMAP_Age.png", units="in", width=6, height=5, res=300)
+DimPlot(s.obj, reduction = "umap", group.by = "Age",
+        cols = alpha(age.col, 0.8), shuffle = TRUE, pt.size = NULL) + ggtitle("Age")
+invisible(dev.off())
+
+# Stimuli
+png("4)_UMAP_Stimuli.png", units="in", width=6, height=5, res=300)
+DimPlot(s.obj, reduction = "umap", group.by = "Stimuli",
+        cols = alpha(stim.col, 0.8), shuffle = TRUE, pt.size = NULL) + ggtitle("Stimuli")
+invisible(dev.off())
+
+# Age and Stimuli
+png("5)_UMAP_Age_Stim.png", units="in", width=6, height=5, res=300)
+DimPlot(s.obj, reduction = "umap", group.by = "Age.Stimuli_Group",
+        cols = alpha(set.col_G, 0.8), shuffle = TRUE, pt.size = NULL) +
+  ggtitle("Stimuli and age")
+invisible(dev.off())
+
+# Donor
+png("6)_UMAP_Donor.png", units="in", width=6, height=5, res=300)
+DimPlot(s.obj, reduction = "umap", group.by = "Sample",
+        cols = alpha(samp.col, 0.8), shuffle = T, pt.size = NULL) +
+  ggtitle("Donor")
+invisible(dev.off())
+
+#Cell cycle phase
+png("7)_UMAP_Phase.png", units="in", width=6, height=5, res=300)
+DimPlot(s.obj, reduction = "umap", group.by = "Phase",
+        cols = alpha(phase.col, 0.8), shuffle = T, pt.size = NULL) +
+  ggtitle("Cell cycle phase")
+invisible(dev.off())
+
+#############################################################################################
+
+# Part 3 - Differential expression analysis
+
+DefaultAssay(s.obj) = "RNA"
+
+#### Cord - LPS 
+
+# Subset to sample of interest
+sx = subset(s.obj, Age == "CBMC")
+sx = subset(sx, Stimuli != "PIC") # excluding PolyIC samples
+table(sx$Age, sx$Stimuli)
+
+# Choose celltypes
+table(sx$Azimuth_2_CT)
+ct.idx = c("B intermediate", "B naive", "CD14 Mono", "CD16 Mono", "CD4 Naive",
+           "CD4 TCM", "CD8 Naive", "CD8 TEM", "gdT", "HSPC", "ILC", "NK", "Treg")
+
+# Initiate list object to save results
+CBMC_LPS_res = list()
+
+# Loop the analysis for each cell type
+
+for (ct in ct.idx) {
+  tic()
+  sx1 = subset(sx, Azimuth_2_CT == ct)
+  Idents(object = sx1) = sx1$Stimuli
+  # Run if bot conditiona have greater than 5 representatives
+  if(table(Idents(sx1))[[1]]>5 & table(Idents(sx1))[[2]]>5) {
+    DEGs <- FindMarkers(sx1, ident.1 = "LPS", ident.2 = "CTRL", test.use = "MAST",
+                        latent.vars = c("CDR", "percent.mt", "Phase", "Sample"),
+                        logfc.threshold = 0, min.pct = 0.1)
+    # change adjP value which = 0 to the minimum
+    minval = min(DEGs$p_val_adj[DEGs$p_val_adj != 0]); minval
+    DEGs$p_val_adj = ifelse(DEGs$p_val_adj == 0, minval, DEGs$p_val_adj)
+    # add -Log10 Padj-P value
+    DEGs$nLog10_adjP = -log10(DEGs$p_val_adj)
+    # Add Gene IDs
+    DEGs$EnsemblID <- mapIds(org.Hs.eg.db, keys = rownames(DEGs),
+                             keytype = "SYMBOL", column="ENSEMBL")
+    DEGs$EntrezID <- mapIds(org.Hs.eg.db, keys = rownames(DEGs),
+                            keytype = "SYMBOL", column="ENTREZID")
+    DEGs$CT = ct
+    DEGs$Col = set.col[DEGs$CT]
+    # Add results to list
+    CBMC_LPS_res[[ct]] = DEGs
+    print(paste0(ct, " is done!!!"))
+  }
+  toc()
+}
+
+
+# See example output
+names(CBMC_LPS_res)
+head(CBMC_LPS_res[["CD14 Mono"]])
+
+### Volcano plot
+
+# Plot example volcano plot
+
+ct = "CD14 Mono"
+DEGs = CBMC_LPS_res[[ct]]
+
+setwd(Out.dir2)
+png("8)_Example_VP_CBMC_LPS.png", units="in", width=5.5, height=5, res=300)
+plot(DEGs$avg_log2FC, DEGs$nLog10_adjP, pch = 21, col = alpha("grey50", 0.5),
+         bg = alpha("grey50", 0.25), xlab = "Average Log2FC",
+     ylab = "-Log10 adj P value (Bonferroni)",
+         main = paste(ct, "", "\nCBMC - LPS vs CTRL", sep=""),
+         font.lab = 2, cex.lab=1.25, font.axis=2, cex=0.7)
+    abline(h = -log10(0.01), lty=3, col = "grey50")
+    points(DEGs$avg_log2FC[DEGs$p_val_adj<0.01 & DEGs$avg_log2FC>0.25],
+           DEGs$nLog10_adjP[DEGs$p_val_adj<0.01 & DEGs$avg_log2FC>0.25],
+           pch = 21, cex=0.7, col = alpha("firebrick1", 0.75), bg = alpha("firebrick1", 0.5))
+    points(DEGs$avg_log2FC[DEGs$p_val_adj<0.01 & DEGs$avg_log2FC<(-0.25)],
+           DEGs$nLog10_adjP[DEGs$p_val_adj<0.01 & DEGs$avg_log2FC<(-0.25)],
+           pch = 21, cex=0.7, col = alpha("royalblue2", 0.75), bg = alpha("royalblue2", 0.5))
+    invisible(dev.off())
+
+### Pathways analysis
+
+# Example pathways analysis
+
+ct = "CD14 Mono"
+nam = "CBMC_LPS"
+
+# Subset
+In.dat = CBMC_LPS_res[[ct]]
+# Upregulated genes
+in.up = subset(In.dat, (p_val_adj < 0.01 & avg_log2FC > 0.25))
+# Downregulated genes
+in.down = subset(In.dat, (p_val_adj < 0.01 & avg_log2FC < -0.25))
+
+# Choose databases for analysis
+dbs <- enrichR::listEnrichrDbs()
+dbs2 = dbs$libraryName[c(173, 176:178, 203)]
+
+# Upregulated
+# run enrichR and extract results
+enriched <- suppressMessages(enrichr(rownames(in.up), dbs2))
+r.KEGG = enriched[["KEGG_2021_Human"]]; r.KEGG$DB = "KEGG"
+r.reactome = enriched[["Reactome_2022"]]; r.reactome$DB = "Reactome"
+r.GOBP = enriched[["GO_Biological_Process_2021"]]; r.GOBP$DB = "GO:BP"
+r.GOCC = enriched[["GO_Cellular_Component_2021"]]; r.GOCC$DB = "GO:CC"
+r.GOMF = enriched[["GO_Molecular_Function_2021"]]; r.GOMF$DB = "GO:MF"
+comb = rbind(r.KEGG, r.reactome, r.GOBP, r.GOCC, r.GOMF)
+comb = comb[order(comb$Adjusted.P.value), ]
+comb[1:10, c(1:5, 10)]
+comb$colour = ifelse(comb$DB == "Reactome", "blue2",
+                     ifelse(comb$DB == "KEGG", "orange",
+                            ifelse(comb$DB == "GO:BP", "mediumpurple1",
+                                   ifelse(comb$DB == "GO:MF", "darkseagreen2", "indianred1"))))
+
+# Optional: save results
+#write.csv(comb, paste0(ct, "_UP_Pathways.csv"))
+
+# Subset to top 25 results
+comb1 = comb[1:25, ]
+# Shorten names for plotting
+nam.ls = ifelse(nchar(comb1$Term) > 50,
+                paste(substr(comb1$Term, 1, 50), "...", sep=""), comb1$Term)
+# plot
+setwd(Out.dir2)
+png("9)_Example_Pathways_CBMC_LPS.png", units="in", width=12, height=10, res=300)
+par(mar = c(5.1, 25.1, 4.1, 2.1))
+barplot(rev(-log10(comb1$Adjusted.P.value)), horiz = T, xlab = "-Log10(Adjused-P Value)",
+        main = paste0(nam, " - ", ct, "\n", "Enriched pathways from upregulated genes"),
+        col = alpha(rev(comb1$colour), 0.5), border = rev(comb1$colour), space = 0.5,
+        names = rev(nam.ls), las = 2, xaxt="n", cex.lab = 1.2, font.lab = 2,font = 2, cex.main = 1.2, cex.names = 1.0)
+axis(1, at = 1:round(max(-log10(comb1$Adjusted.P.value)),0), 
+     labels = 1:round(max(-log10(comb1$Adjusted.P.value)),0), las=1)
+abline(v=-log10(0.001), col = 'red', lty=2, lwd=2)
+legend("bottomright", legend = c("Reactome", "KEGG", "GO:BP", "GO:MF", "GO:CC"), 
+       col = c("blue2", "orange", "mediumpurple1", "darkseagreen2", "indianred1"),
+       pt.bg = alpha(c("blue2", "orange", "mediumpurple1", "darkseagreen2", "indianred1"), 0.5),
+       pch = 22, pt.cex=4, cex=1.75)
+invisible(dev.off())
+
+
+### Multiplot
+
+# Bind results
+CL_fp = rbind(CBMC_LPS_res[["B intermediate"]], CBMC_LPS_res[["B naive"]],
+              CBMC_LPS_res[["CD14 Mono"]], CBMC_LPS_res[["CD16 Mono"]],
+              CBMC_LPS_res[["CD4 Naive"]], CBMC_LPS_res[["CD4 TCM"]],
+              CBMC_LPS_res[["CD8 Naive"]], CBMC_LPS_res[["CD8 TEM"]],
+              CBMC_LPS_res[["gdT"]], CBMC_LPS_res[["HSPC"]],
+              CBMC_LPS_res[["ILC"]], CBMC_LPS_res[["NK"]],
+              CBMC_LPS_res[["Treg"]])
+
+# subset to DEGs
+CL_fp = subset(CL_fp, (avg_log2FC > 0.25 | avg_log2FC < -0.25))
+CL_fp = subset(CL_fp, p_val_adj < 0.01)
+# order
+CL_fp1 = CL_fp[order(-CL_fp$CT, -CL_fp$p_val_adj), ]
+table(CL_fp1$CT)
+# index
+CL_fp1$IDX = 1:nrow(CL_fp1)
+
+# Plot
+
+png("10)_CBMC_LPS_Summary_VP.png", units="in", width=9, height=5, res=600)
+par(mar = c(3.1, 4.1, 4.5, 4.1) )
+plot(CL_fp1$IDX, CL_fp1$nLog10_adjP, xlab="", ylab="",  
+     axes=FALSE, type="l", col=alpha("grey70", 80), lty = 3)
+abline(h=2, col = "black", lty=1, lwd=1)
+mtext("-Log10 adj-P value",side=4,col="black",line=2.9, las = 0, cex=1.25) 
+axis(4, col="black",col.axis="black",las=1)
+par(new=TRUE)
+plot(CL_fp1$IDX, CL_fp1$avg_log2FC, cex = 0.5, lwd = 0.5, pch =21,
+     col = alpha(CL_fp1$Col, 0.4),
+     main = "", xlab = "", ylab = "", xaxt = 'n', cex.main=0.9,
+     bg = alpha(CL_fp1$Col, 0.2))
+title("CBMC - LPS vs CTRL\nDifferentially expressed genes\ncompared to control",
+      cex.main = 1.1, line = 0.5, adj = 0.0, font.main = 3)
+title(ylab="Average Log2FC", line=2.5, cex.lab=1.25)
+title(xlab="Decreasing adjusted-P value (stratified by cell type)
+(minimum adjusted-p value < 0.01)",
+      line=1.3, cex.lab=1.2)
+abline(h = -0.25, col = alpha("blue2", 0.5), lty=1, lwd=1)
+abline(h = 0.25, col = alpha("red2", 0.5), lty=1, lwd=1)
+# Add gene label to plot
+degs = CL_fp1[(CL_fp1$avg_log2FC<(-4) | CL_fp1$avg_log2FC> 4), ] # Change to highlight genes
+addTextLabels(degs$IDX, degs$avg_log2FC, labels = rownames(degs), avoidPoints = T,
+              cex.label=0.7, col.label=alpha(degs$Col, 0.5), col.line = alpha(degs$Col, 0.3))
+# Add legend
+legend("topright",
+       legend = c("B naive", "B intermediate",
+                  "CD4 Naive", "CD4 TCM", "Treg",
+                  "CD8 Naive", "CD8 TEM", "gdT",
+                  "NK", "CD14 mono", "CD16 mono",
+                  "HSPC"), 
+       col = c("royalblue2", "plum", 
+               "deepskyblue", "coral1", "cornflowerblue",
+               "darkorange", "navy", "yellow2",
+               "magenta3", "forestgreen", "gold2",
+               "brown3"),
+       pt.bg = alpha(c("royalblue2", "plum", 
+                       "deepskyblue", "coral1", "cornflowerblue",
+                       "darkorange", "navy", "yellow2",
+                       "magenta3", "forestgreen", "gold2",
+                       "brown3"), 0.5),
+       pch=21, pt.cex=1.1, cex=0.65, ncol=4, inset=c(0,-0.15), xpd=TRUE)
+invisible(dev.off())
+
+#####################################################################################
+
+# Part 4 - Monocle analysis
+
+#To be added
+
+#####################################################################################
+
+# Part 5 - CellCall analysis
+
+# To be added
+
+#####################################################################################
+
+# Session info
+
+sessionInfo()
 
 
 
