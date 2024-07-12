@@ -8,4 +8,6 @@ Data generated from 10x scRNAseq of matched Cord blood mononuclears cells (CBMC)
 
 This repository includes the raw counts data (post cellranger) which are also available from the Gene Expression omnibus (GSE232186), available at https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE232186
 
+The purpose of this repo is to demonstrate the main QC and analysis steps used for the project and included in the publication. The QC steps are wrapped in a single function which is applied to the raw counts data for each sample. The samples are then integrated and annotated, and example analysis is shown for differential expression analysis, pathways analysis, pseudotime trajectory analysis, and cell-cell communication analysis.
 
+Note: This project was initated several years ago and as such several steps are outdated or sub-optimal since, and should be updated to more recent versions where possible.

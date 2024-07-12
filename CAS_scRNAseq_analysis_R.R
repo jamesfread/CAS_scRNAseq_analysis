@@ -22,6 +22,7 @@ In.dir = "Path/To/Raw_data"
 Out.dir1 = "Path/To/QC"
 Out.dir2 = "Path/To/Output"
 
+#############################################################################################
 
 # Part 1 - QC and Preprocessing
 
@@ -521,7 +522,9 @@ D2_5yr_PIC = preprocess_function(d = "Donor2", age = "5yr", stim = "PIC", save.o
 toc()
 
 
-###########################################################
+
+#############################################################################################
+
 
 # Part 2 - Integration and Annotation
 
@@ -777,6 +780,9 @@ invisible(dev.off())
 
 # Part 3 - Differential expression analysis
 
+# Example of LPS vs CTRL in CBMC, can be adjusted for other comparisons
+
+
 DefaultAssay(s.obj) = "RNA"
 
 #### Cord - LPS 
@@ -982,13 +988,223 @@ invisible(dev.off())
 
 # Part 4 - Monocle analysis
 
-#To be added
+## Example of LPS/CTRL - Monocytes
+
+library(monocle3)
+DefaultAssay(s.obj) = "RNA"
+
+
+sx = subset(s.obj, Stimuli != "PIC") # retain LPS and Ctrl
+sx = subset(sx, (Azimuth_2_CT == c("CD14 Mono"))) # Subset to VD14+ Monocytes
+table(sx$Azimuth_2_CT, sx$Stimuli)
+
+# Housekeeping
+
+# Re-order
+sx@meta.data$Age.Stimuli_Group = factor(sx$Age.Stimuli_Group,
+                                        levels = c("CBMC_CTRL", "5yr_PBMC_CTRL",
+                                                   "CBMC_LPS", "5yr_PBMC_LPS"))
+# Add color scheme
+sx1$GroupX_col = ifelse(sx1$Age.Stimuli_Group == "CBMC_CTRL", "grey70", 
+                        ifelse(sx1$Age.Stimuli_Group == "5yr_PBMC_CTRL", "grey40", 
+                               ifelse(sx1$Age.Stimuli_Group == "CBMC_LPS", "green3",
+                                      "darkgreen")))
+
+
+
+## Monocle preprocessing
+
+# These are the basic preprocessing steps for monocle, starting from raw counts.
+
+# Index of gene names (needed to populate gene_metadata below)
+nams = rownames(sx@assays$RNA$counts)
+# Create cell data set object (monocle input)
+cds <- new_cell_data_set(as.matrix(sx@assays$RNA$counts),
+                         cell_metadata = as.data.frame(sx@meta.data),
+                         gene_metadata = data.frame(GeneID = nams, gene_short_name = nams,
+                                                    row.names = nams))
+# Preprocess
+cds <- preprocess_cds(cds, num_dim = 50, method = "PCA", verbose = TRUE)
+# Align
+cds <- align_cds(cds, alignment_group = c("Sample"), preprocess_method = "PCA",
+                 residual_model_formula_str = "~ percent.mt + CDR", verbose = TRUE)
+# Dimensionality reduction
+cds1 <- reduce_dimension(cds, umap.n_neighbors = 10, umap.min_dist = 0.1,
+                         preprocess_method = "Aligned",
+                         reduction_method = "UMAP", max_components = 2)
+
+# Plot UMAP by stimuli
+plot_cells(cds1, color_cells_by = "Stimuli", cell_size = 1)
+
+# Plot UMAP by age
+plot_cells(cds1, color_cells_by = "Age", cell_size = 1)
+
+
+### Cluster cells
+cds2 <- cluster_cells(cds1, k = 10, partition_qval = 0.7,
+                      resolution = 0.005, random_seed = 42)
+
+
+# Plot UMAP by partition (major, non-connection clusters)
+plot_cells(cds2, color_cells_by = "partition", cell_size = 1)
+
+# Plot by cluster
+plot_cells(cds2, color_cells_by = "cluster", cell_size = 1)
+
+# Learn principal graph from the reduced dimensions
+set.seed(123); cds3 <- learn_graph(cds2, close_loop = FALSE)
+
+# Plot UMAP by age and stimuli
+plot_cells(cds3, color_cells_by = "Age.Stimuli_Group", cell_size = 0.75) + 
+  scale_color_manual(values=c("grey70", "grey40", "green3", "darkgreen"))
+
+### Order cells
+
+# This function actuates a pop-out shiney app to choose a root node as the pseudotime start point
+cds4 <- order_cells(cds3)
+
+### Plot
+
+# Plot UMAP by age and stim
+setwd(Out.dir2)
+png("11a)_LPS_Monocytes_Monocle_GroupX.png", width=6, height=5, units = "in", res=600)
+plot_cells(cds4, color_cells_by = "Age.Stimuli_Group", cell_size = 0.75,
+           trajectory_graph_segment_size = 1, alpha = 0.75,
+           label_cell_groups=FALSE,
+           label_leaves=FALSE,
+           label_roots = FALSE,
+           label_branch_points = FALSE,
+           trajectory_graph_color = "black") + 
+  theme(legend.title=element_blank()) + ggtitle("Age/Stimuli Group") +
+  scale_color_manual(values=c("grey70", "grey40", "green3", "darkgreen"))
+invisible(dev.off())
+
+
+# Plot UMAP by pseudotime
+png("11b)_LPS_Monocytes_Monocle_PT.png", width=6, height=5, units = "in", res=600)
+plot_cells(cds4, color_cells_by = "pseudotime", cell_size = 0.75,
+           trajectory_graph_segment_size = 1, alpha = 0.75,
+           label_cell_groups=FALSE,
+           label_leaves=FALSE,
+           label_roots = FALSE,
+           label_branch_points = FALSE,
+           trajectory_graph_color = "black")
+invisible(dev.off())
+
+# Add monocle results to subsetted seurat object
+
+# Check data sets match
+identical(rownames(sx), rownames(cds4))
+identical(colnames(sx), colnames(cds4))
+
+# add pseudotime
+sx$Pseudotime = pseudotime(cds4, reduction_method = "UMAP")
+# add monocle dimensionality reduction (UMAP)
+sx[["monocle_Umap"]] <- CreateDimReducObject(embeddings = reducedDims(cds4)[["UMAP"]],
+                                             key = "Umap_", assay = DefaultAssay(sx))
+
+# This seurat object can be used for other analysis, for example celloracle (would save as a h5ad file for python).
+
+
 
 #####################################################################################
 
 # Part 5 - CellCall analysis
 
-# To be added
+# Example with LPS and unstimulated CBMC samples
+
+library(cellcall)
+library(networkD3)
+library(magrittr)
+
+# Subset to comparison of interest
+sx = subset(s.obj, (Age == "CBMC" & Stimuli == "CTRL" | 
+                      Age == "CBMC" & Stimuli == "LPS"))
+table(sx$Age, sx$Stimuli)
+
+# Choose cell type to run analysis on
+sx1 = subset(sx, (Azimuth_2_CT == "B naive" | Azimuth_2_CT == "CD14 Mono" |
+                    Azimuth_2_CT == "Treg" | Azimuth_2_CT == "CD4 TCM" |
+                    Azimuth_2_CT == "CD4 Naive" | Azimuth_2_CT == "CD8 Naive" |
+                    Azimuth_2_CT == "CD8 TEM" | Azimuth_2_CT == "HSPC" |
+                    Azimuth_2_CT == "ILC" | Azimuth_2_CT == "NK"))
+
+# Identify 2,000 most variable features (with CTRL samples present)
+sx1 = FindVariableFeatures(sx1, assay = "RNA", selection.method = "vst",
+                           loess.span = 0.3, nfeatures = 2000, verbose = FALSE)
+
+# Subset to LPS samples
+sx1 = subset(sx1, Stimuli == "LPS")
+# Check the subsetted data
+table(sx1$Age, sx1$Stimuli)
+
+# Create input for cellcall
+t1 = as.data.frame(sx1@assays$RNA$counts[VariableFeatures(sx1), ])
+
+# Column names of the dataframe must identify the cell type and be unique
+colnames(t1) = paste(sx1@meta.data$Azimuth_2_CT, colnames(t1), sep="_")
+colnames(t1) = gsub("-", "_", colnames(t1))
+colnames(t1) = gsub(" ", "", colnames(t1))
+
+# Create cellwave object
+cw.obj = CreateNichConObject(data=t1, min.feature = 3, names.field = 1,
+                             names.delim = "_", source = "UMI",
+                             scale.factor = 10^6, Org = "Homo sapiens",
+                             project = "LPS_CBMC")
+
+# Run main cell call function (takes ~25 minutes)
+  
+tic()
+cw.obj <- TransCommuProfile(object = cw.obj, pValueCor = 0.05,
+                            CorValue = 0.1, topTargetCor=1, p.adjust = 0.1,
+                            use.type="mean", probs = 0.1, method="weighted",
+                            IS_core = TRUE, Org = 'Homo sapiens')
+toc()
+
+# Circos plot
+
+# Define colors and names
+colors.cells <- data.frame(color=c("royalblue2", "forestgreen", "deepskyblue",
+                                   "coral1", "darkorange", "navy", "brown3",
+                                   "lightblue", "magenta3", "cornflowerblue"),
+                           stringsAsFactors = FALSE)
+rownames(colors.cells) <- c("Bnaive", "CD14Mono", "CD4Naive", "CD4TCM",
+                            "CD8Naive", "CD8TEM", "HSPC", "ILC", "NK", "Treg")
+
+# plot
+setwd(Out.dir2)
+png("12)_LPS_CBMC_Circos.png", width=7, height=6, units = "in", res=600)
+ViewInterCircos(object = cw.obj, font = 2, cellColor = colors.cells,
+                lrColor = c("black", "grey60"), arr.type = "big.arrow",
+                arr.length = 0.05, trackhight1 = 0.05, slot="expr_l_r_log2_scale",
+                linkcolor.from.sender = TRUE, linkcolor = NULL, gap.degree = 1.4,
+                trackhight2 = 0.032, track.margin2 = c(0.01,0.12), DIY = FALSE)
+invisible(dev.off())
+
+# Sankey plot
+
+# For example, between CD4 naive T cells and CD14 Monocytes
+cw.obj <- LR2TF(object = cw.obj, sender_cell="CD4Naive", recevier_cell="CD14Mono",
+                slot="expr_l_r_log2_scale", org="Homo sapiens")
+head(cw.obj@reductions$sankey)
+
+# Set up
+# Extract sankey
+LRTF.dat <- cw.obj@reductions$sankey
+# Get the Ligand-Receptor-TF score
+LRTF.dat <- trans2tripleScore(LRTF.dat)
+head(LRTF.dat)
+# Create custom colour
+var.col = viridis::turbo(8)
+nums <- length(unique(LRTF.dat$Ligand))
+var.col.list <- rep(var.col, times=ceiling(nums/length(var.col)))
+
+# Plot
+png("13)_LPS_CBMC_CD4T_Mono_sankey.png", width=6, height=5, units = "in", res=600)
+sankey_graph(df = LRTF.dat, axes=1:3, mycol = var.col.list[1:nums],
+             isGrandSon = TRUE, nudge_x = nudge_x, font.size = 2,
+             boder.col="white", set_alpha = 0.8)
+invisible(dev.off())
 
 #####################################################################################
 
@@ -996,6 +1212,7 @@ invisible(dev.off())
 
 sessionInfo()
 
+#####################################################################################
 
-
+# END
 
