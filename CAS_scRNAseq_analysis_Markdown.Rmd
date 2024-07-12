@@ -9,7 +9,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-
 ### Load libraries
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE, eval=TRUE}
@@ -479,9 +478,9 @@ setwd(In.dir)
 list.files()
 ```
 
-Now run the function to apply preprocessing to the raw data. The function will create several output plots and save a seurat object of the preprocessed data (if save.obj = "TRUE)
+Now run the function to apply preprocessing to the raw data. The function will create several output plots and save them in the QC directory.
 
-Note: 'save.obj' is set to 'FALSE' as the seurat object saved is > 100mb for each sample, which is larger than github allows.
+Optional; can also save a seurat object of the preprocessed data (if save.obj = "TRUE). Note: 'save.obj' is set to 'FALSE' as the seurat object saved is > 100mb for each sample, which is larger than github's limit.
 
 
 ## Donor 1 - Cord blood
@@ -1482,7 +1481,7 @@ rownames(colors.cells) <- c("Bnaive", "CD14Mono", "CD4Naive", "CD4TCM",
 plot
 ```{r, message=FALSE, warning=FALSE}
 setwd(Out.dir2)
-png("X)_LPS_CBMC_Circos.png", width=7, height=6, units = "in", res=600)
+png("14)_LPS_CBMC_Circos.png", width=7, height=6, units = "in", res=600)
 ViewInterCircos(object = cw.obj, font = 2, cellColor = colors.cells,
                 lrColor = c("black", "grey60"), arr.type = "big.arrow",
                 arr.length = 0.05, trackhight1 = 0.05, slot="expr_l_r_log2_scale",
@@ -1519,7 +1518,7 @@ var.col.list <- rep(var.col, times=ceiling(nums/length(var.col)))
 Plot
 ```{r, warning=FALSE, message=FALSE}
 setwd(Out.dir2)
-png("X)_LPS_CBMC_CD4T_Mono_sankey.png", width=6, height=5, units = "in", res=600)
+png("15)_LPS_CBMC_CD4T_Mono_sankey.png", width=6, height=5, units = "in", res=600)
 sankey_graph(df = LRTF.dat, axes=1:3, mycol = var.col.list[1:nums],
              isGrandSon = TRUE, nudge_x = nudge_x, font.size = 2,
              boder.col="white", set_alpha = 0.8)
