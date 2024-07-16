@@ -776,6 +776,11 @@ DimPlot(s.obj, reduction = "umap", group.by = "Phase",
   ggtitle("Cell cycle phase")
 invisible(dev.off())
 
+# Optional, save integrated and annotated data object
+# setwd(In.dir)
+# saveRDS(s.obj, "seurat_object_integrated_annotated.rds")
+
+
 #############################################################################################
 
 # Part 3 - Differential expression analysis
